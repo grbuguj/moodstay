@@ -1,6 +1,8 @@
 # Moodstay content-generation instructions
 
-When the user supplies only a lodging name, treat it as a request to create one Instagram Reels narration script. Follow [`docs/script-generation-engine.md`](docs/script-generation-engine.md) as the canonical rules, research current property facts, then return a Typecast-ready Korean script. Do not ask for a brief unless a missing detail blocks a useful script.
+When the user supplies only a lodging name, treat it as a request to continue the production workflow in [`docs/reel-production-workflow.md`](docs/reel-production-workflow.md), not merely write a standalone script. Create or resume a property project, research current differentiators, select and document 20 distinct portrait photo candidates, arrange them into a story, write narration split one unique caption per shot, write one video-generation prompt per photo, and persist the state/artifacts in that project. Then wait for the user-generated clips and use `tools/render_reel.py` for Typecast narration, timing-aligned edits, subtitles, and final rendering. Do not ask for a brief unless a missing detail blocks useful work.
+
+Keep every phase explicit and truthful: a source page is not proof of image redistribution rights; a prompt is not a generated clip; a render command succeeding is not final QA. Never claim a stage is complete without its named artifact/check. Do not commit photo/video assets to a public GitHub repository unless the user's rights specifically permit that redistribution. Store reusable prompts, scripts, source links, selection rationale, rights status, and resume state in Git-tracked project files. Keep API keys out of Git and chat.
 
 Non-negotiable output rules:
 

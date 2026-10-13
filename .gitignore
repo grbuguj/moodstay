@@ -2,3 +2,6 @@
 Thumbs.db
 __pycache__/
 *.py[cod]
+projects/stayboda-reel/clips/*
+!projects/stayboda-reel/clips/.gitkeep
+projects/stayboda-reel/output/

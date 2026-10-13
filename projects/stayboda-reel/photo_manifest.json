@@ -1,0 +1,30 @@
+{
+  "property": "스테이 보다",
+  "source_gallery": "https://www.stayfolio.com/en/findstay/stayboda/gallery",
+  "source_image_urls_recorded": false,
+  "rights_status": "The user previously stated image permissions were obtained; permission to redistribute the image files through this public GitHub repository has not been verified.",
+  "crop": "9:16 center crop, 1080x1920",
+  "github_assets_included": false,
+  "shots": [
+    {"cut": 1, "file": "01.jpg", "visual": "Mountain-side stay exterior and garden"},
+    {"cut": 2, "file": "02.jpg", "visual": "Moss garden courtyard"},
+    {"cut": 3, "file": "03.jpg", "visual": "Living/dining room facing the garden"},
+    {"cut": 4, "file": "04.jpg", "visual": "Dining table beside a garden-facing window"},
+    {"cut": 5, "file": "05.jpg", "visual": "Bedroom with a large garden-facing window"},
+    {"cut": 6, "file": "06.jpg", "visual": "Interior space opening toward the garden"},
+    {"cut": 7, "file": "07.jpg", "visual": "Sofa and indoor tree by the window"},
+    {"cut": 8, "file": "08.jpg", "visual": "Twin bedroom"},
+    {"cut": 9, "file": "09.jpg", "visual": "Kitchen and dining area"},
+    {"cut": 10, "file": "10.jpg", "visual": "Kitchen interior"},
+    {"cut": 11, "file": "11.jpg", "visual": "Kitchen shelves and appliances"},
+    {"cut": 12, "file": "12.jpg", "visual": "Kitchenware drawer"},
+    {"cut": 13, "file": "13.jpg", "visual": "Bathroom sink and mirror"},
+    {"cut": 14, "file": "14.jpg", "visual": "Wooden kitchen cabinetry and appliance niche"},
+    {"cut": 15, "file": "15.jpg", "visual": "Teacup on the deck"},
+    {"cut": 16, "file": "16.jpg", "visual": "Coffee machine"},
+    {"cut": 17, "file": "17.jpg", "visual": "Open doorway into the room"},
+    {"cut": 18, "file": "18.jpg", "visual": "Wooden hanger area"},
+    {"cut": 19, "file": "19.jpg", "visual": "Small speaker and interior detail"},
+    {"cut": 20, "file": "20.jpg", "visual": "Bedroom for a quiet closing shot"}
+  ]
+}

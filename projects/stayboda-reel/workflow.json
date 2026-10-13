@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "property": "스테이 보다",
+  "project_slug": "stayboda-reel",
+  "current_stage": "awaiting_generated_clips",
+  "completed_stages": [
+    "property_selected",
+    "research_ready",
+    "photos_selected",
+    "storyboard_ready",
+    "generation_pack_ready"
+  ],
+  "next_action": "Generate 20 image-to-video clips from the numbered photos and prompts, then place them in clips/01.mp4 through clips/20.mp4.",
+  "artifacts": {
+    "research": "research.md",
+    "photo_manifest": "photo_manifest.json",
+    "cut_map": "cut-map.md",
+    "narration": "script.txt",
+    "video_prompts": "video_prompts.md",
+    "render_instructions": "README.md"
+  },
+  "photo_assets": {
+    "source_page": "https://www.stayfolio.com/en/findstay/stayboda/gallery",
+    "local_archive_outside_repository": "outputs/stayboda_vertical_20.zip",
+    "tracked_in_github": false,
+    "public_repository_redistribution_rights": "not_verified; do not commit these photos without explicit confirmation"
+  },
+  "external_requirements": [
+    "20 generated clips, one per cut",
+    "Typecast API key stored locally as TYPECAST_API_KEY",
+    "Chosen Typecast voice ID stored locally as TYPECAST_VOICE_ID"
+  ]
+}
