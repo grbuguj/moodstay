@@ -1,0 +1,25 @@
+{
+  "property_name": "연화문호텔 양양",
+  "slug": "yeonhwamun-yangyang",
+  "current_stage": "research_ready",
+  "angle_candidates": [
+    "양양에서 바다뷰 대신 고른, 조용한 한옥 감성 힐링 스테이",
+    "객실별 히노끼탕/욕조가 만드는 비 오는 날 양양 휴식",
+    "여행은 왔지만 북적이는 바다 대신 제대로 쉬고 싶은 커플·친구 여행"
+  ],
+  "next_action": "Receive 8–15 property photos from the user, then choose a fact-supported story angle and write the narration.",
+  "facts_locked": false,
+  "assets": {
+    "source_photos": "photo_manifest.json",
+    "research": "research.md",
+    "narration": "narration.txt",
+    "captions": "script.txt",
+    "cut_map": "cut-map.md",
+    "video_prompts": "video_prompts.md"
+  },
+  "local_requirements": [
+    "TYPECAST_API_KEY stored as a user environment variable",
+    "TYPECAST_VOICE_ID stored as a user environment variable",
+    "FFmpeg and FFprobe available before clip verification/rendering"
+  ]
+}
