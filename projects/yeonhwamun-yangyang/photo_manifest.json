@@ -1,6 +1,6 @@
 {
   "property": "연화문호텔 양양",
-  "status": "visual_pack_ready",
+  "status": "upscaled_visual_pack_ready",
   "rights": "User-supplied assets are not assumed cleared for public GitHub redistribution.",
   "final_visual_mix": {
     "total_cuts": 20,
@@ -8,6 +8,14 @@
     "ai_assisted_cuts": ["V01", "V06", "V10", "V17"],
     "intentional_callback": "V20 reuses the V02 night image with different video motion.",
     "rejected_pattern": "Do not use near-duplicate exterior images made by only adding a hand."
+  },
+  "upscale_delivery": {
+    "preferred_folder": "still-pack-upscaled",
+    "unique_original_crops_restored": 15,
+    "existing_ai_cuts_kept_unchanged": ["V01", "V06", "V10", "V17"],
+    "callback_copy": "V20 is an exact copy of restored V02.",
+    "method": "Conservative AI photo restoration with composition, perspective, colors, lighting, and object placement locked; normalized to 1080x1920.",
+    "originals_preserved": "still-pack"
   },
   "photos": [
     {

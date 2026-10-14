@@ -1,7 +1,7 @@
 {
   "property_name": "연화문호텔 양양",
   "slug": "yeonhwamun-yangyang",
-  "current_stage": "visual_pack_ready",
+  "current_stage": "upscaled_visual_pack_ready",
   "angle_candidates": [
     "양양에서 바다뷰 대신 고른, 조용한 한옥 감성 힐링 스테이",
     "객실별 히노끼탕/욕조가 만드는 비 오는 날 양양 휴식",
@@ -16,7 +16,10 @@
     "captions": "script.txt",
     "cut_map": "cut-map.md",
     "video_prompts": "video_prompts.md",
-    "local_stills": "still-pack/V01.png through V20.png (not committed because redistribution rights are not assumed)",
+    "local_stills": "still-pack-upscaled/V01.png through V20.png (preferred Grok inputs; not committed because redistribution rights are not assumed)",
+    "original_stills": "still-pack/V01.png through V20.png (preserved fallback set)",
+    "upscale_contact_sheet": "output/upscaled-still-contact-sheet.jpg",
+    "upscale_delivery_zip": "output/yeonhwamun-yangyang-grok-pack-upscaled.zip",
     "locked_timing": "output/typecast_timestamps.json",
     "locked_audio": "output/narration.wav"
   },

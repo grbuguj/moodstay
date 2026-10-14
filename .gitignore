@@ -6,5 +6,6 @@ projects/*/clips/*
 !projects/*/clips/.gitkeep
 projects/*/output/
 projects/*/still-pack/
+projects/*/still-pack-upscaled/
 .env
 *.wav
