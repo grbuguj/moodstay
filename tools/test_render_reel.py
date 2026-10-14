@@ -22,7 +22,9 @@ class RenderReelTests(unittest.TestCase):
         self.assertAlmostEqual(segments[0].start, 0.0)
         self.assertAlmostEqual(segments[0].end, 0.3)
         self.assertAlmostEqual(segments[1].start, 0.4)
-        self.assertAlmostEqual(segments[1].end, 1.2)
+        # Punctuation is deliberately not part of the visible caption timing.
+        # The renderer preserves the audio tail separately.
+        self.assertAlmostEqual(segments[1].end, 1.1)
 
     def test_alignment_mismatch_fails_instead_of_misaligning_subtitles(self):
         chars = [SimpleNamespace(text=ch, start=0.0, end=0.1) for ch in "잘못된 문장"]

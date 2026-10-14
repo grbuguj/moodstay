@@ -4,8 +4,9 @@ Input folder contract:
   clips/01.mp4 ... clips/NN.mp4
   script.txt (one non-empty caption/narration fragment per shot)
 
-Required environment variables for a real render:
-  TYPECAST_API_KEY, TYPECAST_VOICE_ID
+Timing is prepared before clips are generated with tools/prepare_reel_timing.py.
+The final render reuses that exact narration WAV and character timestamps;
+it never synthesizes a second, potentially different voice track.
 
 FFmpeg and FFprobe must be available on PATH.
 """
@@ -126,6 +127,29 @@ def write_srt(path: Path, segments: Sequence[Segment]) -> None:
     path.write_text("\n".join(cues), encoding="utf-8-sig")
 
 
+def character_payload(characters: Sequence[object]) -> list[dict[str, float | str]]:
+    """Persist the minimal Typecast character timing contract as JSON."""
+    return [
+        {"text": str(item.text), "start": float(item.start), "end": float(item.end)}
+        for item in characters
+    ]
+
+
+def load_timing(path: Path) -> tuple[float, list[object]]:
+    """Load the locked preflight timing without depending on Typecast classes."""
+    from types import SimpleNamespace
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    duration = float(data["audio_duration"])
+    characters = [
+        SimpleNamespace(text=item["text"], start=float(item["start"]), end=float(item["end"]))
+        for item in data["characters"]
+    ]
+    if duration <= 0 or not characters:
+        raise ValueError(f"Invalid or empty Typecast timing file: {path}")
+    return duration, characters
+
+
 def require_tool(name: str) -> str:
     path = shutil.which(name)
     if not path:
@@ -173,9 +197,13 @@ def ffmpeg_filter_path(path: Path) -> str:
     return path.name.replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
 
 
-def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, segments: Sequence[Segment], output: Path, workdir: Path, speed: float = 1.0, ad_label: str = "[광고]") -> None:
+def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, segments: Sequence[Segment], output: Path, workdir: Path, audio_duration: float | None = None, speed: float = 1.0, ad_label: str = "[광고]") -> None:
     boundaries = [0.0] + [segment.start for segment in segments[1:]]
-    total = segments[-1].end
+    # Preserve the real end of the voice file. Cutting at the last spoken Korean
+    # character can chop its trailing punctuation, breath, or natural release.
+    total = audio_duration if audio_duration is not None else segments[-1].end
+    if total < segments[-1].end:
+        raise ValueError("Audio duration cannot end before the final caption.")
     boundaries.append(total)
     durations = [max(0.05, boundaries[i + 1] - boundaries[i]) for i in range(len(clips))]
 
@@ -259,24 +287,18 @@ def main() -> int:
     if output_video.exists() and not args.force:
         raise FileExistsError(f"{output_video} already exists. Review it, then pass --force to replace it.")
     output_dir.mkdir(parents=True, exist_ok=True)
-    narration_path = folder / "narration.txt"
-    narration_text = narration_path.read_text(encoding="utf-8-sig").strip() if narration_path.is_file() else " ".join(captions)
     audio_path = output_dir / "narration.wav"
     srt_path = output_dir / "captions.srt"
     timestamps_path = output_dir / "typecast_timestamps.json"
 
-    print("Generating Typecast narration and character timings...")
-    response = generate_typecast_audio(narration_text, audio_path)
-    characters = response.characters
-    if not characters:
-        raise RuntimeError("Typecast returned no character timestamps; cannot align cuts and subtitles safely.")
-    duration = float(response.audio_duration)
+    if not audio_path.is_file() or not timestamps_path.is_file():
+        raise FileNotFoundError(
+            "Missing locked Typecast preflight. Run: python tools/prepare_reel_timing.py <project>"
+        )
+    print("Loading locked Typecast narration and character timings...")
+    duration, characters = load_timing(timestamps_path)
     segments = align_caption_segments(captions, characters, duration)
     write_srt(srt_path, segments)
-    timestamps_path.write_text(
-        json.dumps({"audio_duration": duration, "segments": [segment.__dict__ for segment in segments]}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
 
     # Verify every input can supply its assigned interval; short videos are safely extended with a held final frame.
     print("Checking clip durations...")
@@ -288,7 +310,7 @@ def main() -> int:
             print(f"  {clip.name}: {available:.2f}s -> will hold final frame to cover {segment.end - segment.start:.2f}s")
 
     print("Rendering vertical video...")
-    render_video(ffmpeg, clips, audio_path, srt_path, segments, output_video, output_dir, speed=args.speed, ad_label=args.ad_label)
+    render_video(ffmpeg, clips, audio_path, srt_path, segments, output_video, output_dir, audio_duration=duration, speed=args.speed, ad_label=args.ad_label)
     print(f"DONE: {output_video}")
     print(f"Audio: {audio_path}\nCaptions: {srt_path}\nTiming: {timestamps_path}")
     return 0

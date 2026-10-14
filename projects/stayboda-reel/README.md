@@ -33,15 +33,16 @@ MOV and M4V are also accepted, but do not put two extensions for the same shot i
    $env:TYPECAST_VOICE_ID = "tc_your_voice_id"
    ```
 
-## Render
+## Lock narration timing, then render
 
 From the repository root:
 
 ```powershell
+python tools/prepare_reel_timing.py projects/stayboda-reel
 python tools/render_reel.py projects/stayboda-reel --dry-run
 python tools/render_reel.py projects/stayboda-reel
 ```
 
-The engine makes one Typecast request for a continuous voice track and character timestamps, then uses those timestamps to time the 20 cuts and captions. It renders a 1080×1920, 30fps H.264/AAC MP4 to `output/final_reel.mp4`, with the audio and subtitle/timing sidecars beside it. Short clips are extended by holding their last frame. Existing output is protected; inspect it first, then use `--force` only if you want to replace it.
+Run the first command immediately after the script is approved, before making the Grok clips. It makes one Typecast request for a continuous voice track and character timestamps. The renderer reuses those locked timestamps to time the 20 cuts and captions, so a second TTS request cannot change the edit rhythm. It renders a 1080×1920, 30fps H.264/AAC MP4 to `output/final_reel.mp4`, with the audio and subtitle/timing sidecars beside it. Short clips are extended by holding their last frame. Existing output is protected; inspect it first, then use `--force` only if you want to replace it.
 
 The sample `script.txt` currently contains the 20-cut Stayboda draft. It can be changed to any new lodging narration, keeping exactly one non-empty line per clip.
