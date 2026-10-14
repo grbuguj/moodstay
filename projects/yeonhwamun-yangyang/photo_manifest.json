@@ -1,7 +1,14 @@
 {
   "property": "연화문호텔 양양",
-  "status": "user_photos_received",
+  "status": "visual_pack_ready",
   "rights": "User-supplied assets are not assumed cleared for public GitHub redistribution.",
+  "final_visual_mix": {
+    "total_cuts": 20,
+    "real_photo_vertical_crops": 16,
+    "ai_assisted_cuts": ["V01", "V06", "V10", "V17"],
+    "intentional_callback": "V20 reuses the V02 night image with different video motion.",
+    "rejected_pattern": "Do not use near-duplicate exterior images made by only adding a hand."
+  },
   "photos": [
     {
       "group": "water_garden",

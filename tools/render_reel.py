@@ -112,6 +112,19 @@ def align_caption_segments(captions: Sequence[str], aligned_characters: Sequence
     return segments
 
 
+def caption_display_segments(segments: Sequence[Segment], audio_duration: float) -> list[Segment]:
+    """Make caption visibility use the exact same boundaries as the video cuts."""
+    if not segments:
+        raise ValueError("At least one caption segment is required.")
+    if audio_duration < segments[-1].end:
+        raise ValueError("Audio duration cannot end before the final caption.")
+    boundaries = [0.0] + [segment.start for segment in segments[1:]] + [audio_duration]
+    return [
+        Segment(segment.text, boundaries[index], boundaries[index + 1])
+        for index, segment in enumerate(segments)
+    ]
+
+
 def srt_timestamp(seconds: float) -> str:
     milliseconds = max(0, round(seconds * 1000))
     hours, remainder = divmod(milliseconds, 3_600_000)
@@ -298,7 +311,7 @@ def main() -> int:
     print("Loading locked Typecast narration and character timings...")
     duration, characters = load_timing(timestamps_path)
     segments = align_caption_segments(captions, characters, duration)
-    write_srt(srt_path, segments)
+    write_srt(srt_path, caption_display_segments(segments, duration))
 
     # Verify every input can supply its assigned interval; short videos are safely extended with a held final frame.
     print("Checking clip durations...")

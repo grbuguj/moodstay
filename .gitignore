@@ -5,5 +5,6 @@ __pycache__/
 projects/*/clips/*
 !projects/*/clips/.gitkeep
 projects/*/output/
+projects/*/still-pack/
 .env
 *.wav

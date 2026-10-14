@@ -1,21 +1,24 @@
 {
   "property_name": "연화문호텔 양양",
   "slug": "yeonhwamun-yangyang",
-  "current_stage": "narration_draft_ready",
+  "current_stage": "visual_pack_ready",
   "angle_candidates": [
     "양양에서 바다뷰 대신 고른, 조용한 한옥 감성 힐링 스테이",
     "객실별 히노끼탕/욕조가 만드는 비 오는 날 양양 휴식",
     "여행은 왔지만 북적이는 바다 대신 제대로 쉬고 싶은 커플·친구 여행"
   ],
-  "next_action": "User reviews narration-draft.md. After approval/revision, lock the final narration with Typecast and build the cut map.",
-  "facts_locked": false,
+  "next_action": "Generate one Grok video per V image using video_prompts.md, save the approved results as clips/01.mp4 through clips/20.mp4, then run verification and the final renderer.",
+  "facts_locked": true,
   "assets": {
     "source_photos": "photo_manifest.json",
     "research": "research.md",
     "narration": "narration.txt",
     "captions": "script.txt",
     "cut_map": "cut-map.md",
-    "video_prompts": "video_prompts.md"
+    "video_prompts": "video_prompts.md",
+    "local_stills": "still-pack/V01.png through V20.png (not committed because redistribution rights are not assumed)",
+    "locked_timing": "output/typecast_timestamps.json",
+    "locked_audio": "output/narration.wav"
   },
   "local_requirements": [
     "TYPECAST_API_KEY stored as a user environment variable",

@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from render_reel import Segment, align_caption_segments, read_script, render_video, srt_timestamp, write_srt
+from render_reel import Segment, align_caption_segments, caption_display_segments, read_script, render_video, srt_timestamp, write_srt
 
 
 class RenderReelTests(unittest.TestCase):
@@ -40,6 +40,12 @@ class RenderReelTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8-sig")
             self.assertIn("00:00:01,250 --> 00:00:02,500", text)
             self.assertIn("안녕하세요.", text)
+
+    def test_display_captions_share_exact_video_cut_boundaries(self):
+        spoken = [Segment("첫 자막", 0.2, 1.5), Segment("둘째 자막", 1.9, 2.8)]
+        displayed = caption_display_segments(spoken, audio_duration=3.2)
+        self.assertEqual(displayed[0], Segment("첫 자막", 0.0, 1.9))
+        self.assertEqual(displayed[1], Segment("둘째 자막", 1.9, 3.2))
 
     def test_script_accepts_variable_non_empty_lines(self):
         with tempfile.TemporaryDirectory() as temp:

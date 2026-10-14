@@ -18,6 +18,7 @@ from pathlib import Path
 
 from render_reel import (
     align_caption_segments,
+    caption_display_segments,
     character_payload,
     generate_typecast_audio,
     read_script,
@@ -49,13 +50,15 @@ def main() -> int:
         raise RuntimeError("Typecast returned no character timestamps; cannot build a safe cut map.")
     duration = float(response.audio_duration)
     segments = align_caption_segments(captions, characters, duration)
-    write_srt(output / "captions.srt", segments)
+    display_segments = caption_display_segments(segments, duration)
+    write_srt(output / "captions.srt", display_segments)
     timing_path.write_text(
         json.dumps(
             {
                 "audio_duration": duration,
                 "characters": character_payload(characters),
                 "segments": [segment.__dict__ for segment in segments],
+                "display_segments": [segment.__dict__ for segment in display_segments],
             },
             ensure_ascii=False,
             indent=2,
