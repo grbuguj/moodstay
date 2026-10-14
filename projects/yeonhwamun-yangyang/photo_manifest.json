@@ -1,6 +1,25 @@
 {
   "property": "연화문호텔 양양",
-  "status": "awaiting_user_photos",
+  "status": "user_photos_received",
   "rights": "User-supplied assets are not assumed cleared for public GitHub redistribution.",
-  "photos": []
+  "photos": [
+    {
+      "group": "water_garden",
+      "count": 6,
+      "observed": "Hanok buildings surrounding a shallow decorative water garden with fountains, a small boat, stone paths, trees, and evening lighting.",
+      "role": "Primary hook and visual proof. Do not describe it as a swimming pool."
+    },
+    {
+      "group": "hanok_room",
+      "count": 9,
+      "observed": "Wood lattice doors, low tea tables, pebble paths, landscape murals, lantern lighting, bedrooms, and an indoor garden detail.",
+      "role": "Second-act reveal: the exterior mood continues inside."
+    },
+    {
+      "group": "in_room_bath",
+      "count": 6,
+      "observed": "Large rectangular soaking baths beside lattice windows and indoor greenery; one wooden bath is also visible.",
+      "role": "Final rest beat. Do not call it a jacuzzi or claim jets/room-wide availability."
+    }
+  ]
 }
