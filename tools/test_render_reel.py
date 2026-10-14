@@ -39,13 +39,15 @@ class RenderReelTests(unittest.TestCase):
             self.assertIn("00:00:01,250 --> 00:00:02,500", text)
             self.assertIn("안녕하세요.", text)
 
-    def test_script_must_have_twenty_non_empty_lines(self):
+    def test_script_accepts_variable_non_empty_lines(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "script.txt"
-            path.write_text("\n".join(f"대사 {n}" for n in range(1, 21)), encoding="utf-8")
-            self.assertEqual(len(read_script(path)), 20)
+            path.write_text("\n".join(f"대사 {n}" for n in range(1, 16)), encoding="utf-8")
+            self.assertEqual(len(read_script(path)), 15)
             path.write_text("하나\n둘\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "exactly 20"):
+            self.assertEqual(read_script(path), ["하나", "둘"])
+            path.write_text("\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "at least one"):
                 read_script(path)
 
     def test_srt_timestamp_rounds_to_milliseconds(self):

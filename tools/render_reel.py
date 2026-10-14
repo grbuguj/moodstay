@@ -1,8 +1,8 @@
-"""Render a 20-shot vertical Reel with Typecast narration and aligned captions.
+"""Render a variable-shot vertical Reel with Typecast narration and aligned captions.
 
 Input folder contract:
-  clips/01.mp4 ... clips/20.mp4
-  script.txt (exactly 20 non-empty lines; one caption/narration fragment per shot)
+  clips/01.mp4 ... clips/NN.mp4
+  script.txt (one non-empty caption/narration fragment per shot)
 
 Required environment variables for a real render:
   TYPECAST_API_KEY, TYPECAST_VOICE_ID
@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import unicodedata
 import shutil
 import subprocess
 import sys
@@ -27,7 +28,6 @@ from typing import Sequence
 FPS = 30
 WIDTH = 1080
 HEIGHT = 1920
-SHOT_COUNT = 20
 
 
 @dataclass(frozen=True)
@@ -40,15 +40,15 @@ class Segment:
 def read_script(path: Path) -> list[str]:
     lines = [line.strip() for line in path.read_text(encoding="utf-8-sig").splitlines()]
     lines = [line for line in lines if line]
-    if len(lines) != SHOT_COUNT:
-        raise ValueError(f"script.txt must contain exactly {SHOT_COUNT} non-empty lines; found {len(lines)}")
+    if not lines:
+        raise ValueError("script.txt must contain at least one non-empty line")
     return lines
 
 
-def find_clips(folder: Path) -> list[Path]:
+def find_clips(folder: Path, shot_count: int) -> list[Path]:
     clips_dir = folder / "clips"
     clips: list[Path] = []
-    for index in range(1, SHOT_COUNT + 1):
+    for index in range(1, shot_count + 1):
         stem = f"{index:02d}"
         matches = [clips_dir / f"{stem}{ext}" for ext in (".mp4", ".mov", ".m4v")]
         present = [path for path in matches if path.is_file()]
@@ -56,7 +56,8 @@ def find_clips(folder: Path) -> list[Path]:
             found = ", ".join(path.name for path in present) or "none"
             raise FileNotFoundError(f"Expected exactly one clip named {stem}.mp4/.mov/.m4v in {clips_dir}; found: {found}")
         clips.append(present[0])
-    extra = [p.name for p in clips_dir.iterdir() if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".m4v"} and not re.fullmatch(r"(?:0[1-9]|1[0-9]|20)\.(?:mp4|mov|m4v)", p.name, re.I)]
+    valid = {f"{index:02d}" for index in range(1, shot_count + 1)}
+    extra = [p.name for p in clips_dir.iterdir() if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".m4v"} and p.stem not in valid]
     if extra:
         raise ValueError("Unexpected video filenames in clips/: " + ", ".join(sorted(extra)))
     return clips
@@ -64,12 +65,15 @@ def find_clips(folder: Path) -> list[Path]:
 
 def align_caption_segments(captions: Sequence[str], aligned_characters: Sequence[object], audio_duration: float) -> list[Segment]:
     """Map exact caption text to Typecast character-level timestamps."""
+    def significant(char: str) -> bool:
+        return not char.isspace() and not unicodedata.category(char).startswith("P")
+
     aligned_text = "".join(str(item.text) for item in aligned_characters)
     transcript = " ".join(captions)
     if aligned_text != transcript:
         # Some services omit whitespace alignment. Support that without guessing timings.
-        compact_aligned = "".join(ch for ch in aligned_text if not ch.isspace())
-        compact_transcript = "".join(ch for ch in transcript if not ch.isspace())
+        compact_aligned = "".join(ch for ch in aligned_text if significant(ch))
+        compact_transcript = "".join(ch for ch in transcript if significant(ch))
         if compact_aligned != compact_transcript:
             raise ValueError("Typecast character alignment does not match script.txt; refusing to burn unsynchronized captions.")
 
@@ -85,15 +89,15 @@ def align_caption_segments(captions: Sequence[str], aligned_characters: Sequence
             timed_chars.append((char, start + span * i / len(fragment), start + span * (i + 1) / len(fragment)))
 
     # Compare non-space characters and retain indices back to the timed array.
-    nonspace = [(char, i) for i, (char, _, _) in enumerate(timed_chars) if not char.isspace()]
-    wanted = [(char, i) for i, char in enumerate(transcript) if not char.isspace()]
+    nonspace = [(char, i) for i, (char, _, _) in enumerate(timed_chars) if significant(char)]
+    wanted = [(char, i) for i, char in enumerate(transcript) if significant(char)]
     if len(nonspace) != len(wanted) or any(a[0] != b[0] for a, b in zip(nonspace, wanted)):
         raise ValueError("Typecast character alignment could not be mapped to script.txt.")
 
     segments: list[Segment] = []
     cursor = 0
     for caption in captions:
-        count = sum(not char.isspace() for char in caption)
+        count = sum(significant(char) for char in caption)
         picked = nonspace[cursor : cursor + count]
         if not picked:
             raise ValueError(f"No speech timing found for caption: {caption}")
@@ -169,7 +173,7 @@ def ffmpeg_filter_path(path: Path) -> str:
     return path.name.replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
 
 
-def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, segments: Sequence[Segment], output: Path, workdir: Path) -> None:
+def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, segments: Sequence[Segment], output: Path, workdir: Path, speed: float = 1.0, ad_label: str = "[광고]") -> None:
     boundaries = [0.0] + [segment.start for segment in segments[1:]]
     total = segments[-1].end
     boundaries.append(total)
@@ -187,7 +191,7 @@ def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, seg
         label = f"v{index}"
         filters.append(
             f"[{index}:v]scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-            f"crop={WIDTH}:{HEIGHT},setsar=1,fps={FPS},setpts=PTS-STARTPTS,"
+            f"crop={WIDTH}:{HEIGHT},setsar=1,fps={FPS},setpts=(PTS-STARTPTS)/{speed:.6f},"
             f"trim=duration={duration:.6f},tpad=stop_mode=clone:stop_duration={duration:.6f},"
             f"trim=duration={duration:.6f},setpts=PTS-STARTPTS[{label}]"
         )
@@ -196,8 +200,13 @@ def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, seg
     srt_filter_path = ffmpeg_filter_path(srt)
     filters.append(
         f"[vbase]subtitles=filename='{srt_filter_path}':force_style="
-        "'FontName=Malgun Gothic,FontSize=64,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-        "BorderStyle=1,Outline=4,Shadow=1,Alignment=5,MarginL=80,MarginR=80,MarginV=0'[vout]"
+        "'FontName=Noto Serif KR,FontSize=72,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+        "BorderStyle=1,Outline=2,Shadow=6,Alignment=5,MarginL=80,MarginR=80,MarginV=0'[vcaption]"
+    )
+    escaped_ad = ad_label.replace("'", r"\'").replace(":", r"\:")
+    filters.append(
+        "[vcaption]drawtext=text='" + escaped_ad + "':font='Noto Serif KR':fontsize=30:"
+        "fontcolor=white:borderw=1:bordercolor=black@0.8:x=w-text_w-42:y=42[vout]"
     )
     filter_complex = ";".join(filters)
     command = [
@@ -222,9 +231,11 @@ def main() -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("project", type=Path, help="Reel project folder with script.txt and clips/01.mp4–20.mp4")
+    parser.add_argument("project", type=Path, help="Reel project folder with script.txt and consecutively numbered clips")
     parser.add_argument("--dry-run", action="store_true", help="Validate files and print the render plan without calling Typecast")
     parser.add_argument("--force", action="store_true", help="Allow replacing generated files in the project's output/ folder")
+    parser.add_argument("--speed", type=float, default=1.0, help="Visual playback speed inside each cut (for example 1.2)")
+    parser.add_argument("--ad-label", default="[광고]", help="Small disclosure label shown in the top-right")
     args = parser.parse_args()
 
     folder = args.project.resolve()
@@ -232,7 +243,7 @@ def main() -> int:
     if not script_path.is_file():
         raise FileNotFoundError(f"Missing {script_path}")
     captions = read_script(script_path)
-    clips = find_clips(folder)
+    clips = find_clips(folder, len(captions))
     ffmpeg = require_tool("ffmpeg")
     ffprobe = require_tool("ffprobe")
     output_dir = folder / "output"
@@ -248,7 +259,8 @@ def main() -> int:
     if output_video.exists() and not args.force:
         raise FileExistsError(f"{output_video} already exists. Review it, then pass --force to replace it.")
     output_dir.mkdir(parents=True, exist_ok=True)
-    narration_text = " ".join(captions)
+    narration_path = folder / "narration.txt"
+    narration_text = narration_path.read_text(encoding="utf-8-sig").strip() if narration_path.is_file() else " ".join(captions)
     audio_path = output_dir / "narration.wav"
     srt_path = output_dir / "captions.srt"
     timestamps_path = output_dir / "typecast_timestamps.json"
@@ -276,7 +288,7 @@ def main() -> int:
             print(f"  {clip.name}: {available:.2f}s -> will hold final frame to cover {segment.end - segment.start:.2f}s")
 
     print("Rendering vertical video...")
-    render_video(ffmpeg, clips, audio_path, srt_path, segments, output_video, output_dir)
+    render_video(ffmpeg, clips, audio_path, srt_path, segments, output_video, output_dir, speed=args.speed, ad_label=args.ad_label)
     print(f"DONE: {output_video}")
     print(f"Audio: {audio_path}\nCaptions: {srt_path}\nTiming: {timestamps_path}")
     return 0

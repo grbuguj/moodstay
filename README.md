@@ -14,7 +14,7 @@
 - `docs/reference-style-spec.md` — 2026-10-13 레퍼런스 실측, 제작 단계와 편집 데이터 구조
 - `tools/analyze_reference.py` — 로컬 영상의 프레임·장면 경계·검수 보드 분석 도구
 - `tools/validate_script.py` — 숙소명 노출·직접 댓글 CTA·엔딩 형식 검사기
-- `tools/render_reel.py` — 20개 클립을 Typecast TTS·타임스탬프에 맞춰 자동 컷편집하고 자막을 입히는 렌더러
+- `tools/render_reel.py` — 가변 개수 클립을 Typecast 글자별 타임스탬프에 맞춰 컷·자막·TTS를 동기화하는 렌더러
 - `projects/stayboda-reel/` — 스테이 보다용 20컷 대본과 영상 투입 폴더
 
 ## 핵심 원칙
@@ -40,10 +40,10 @@ python -m pip install -r requirements.txt
 $env:TYPECAST_API_KEY = "your-api-key"
 $env:TYPECAST_VOICE_ID = "tc_your_voice_id"
 python tools/render_reel.py projects/stayboda-reel --dry-run
-python tools/render_reel.py projects/stayboda-reel
+python tools/render_reel.py projects/stayboda-reel --speed 1.2
 ```
 
-영상은 `projects/stayboda-reel/clips/01.mp4`부터 `20.mp4`까지 넣고 `script.txt` 각 줄을 같은 번호의 컷 대사로 맞춘다. 결과물과 자막·오디오 타이밍 자료는 `projects/stayboda-reel/output/`에 저장된다. API 키는 채팅이나 저장소에 넣지 않는다. 자세한 절차는 [작업 폴더 안내](projects/stayboda-reel/README.md)를 따른다.
+영상은 `clips/01.mp4`부터 끊김 없이 번호를 붙이고 `script.txt`의 각 줄을 같은 번호의 컷 자막으로 맞춘다. 자연스러운 쉼표와 마침표가 필요한 TTS 원문은 선택적으로 `narration.txt`에 저장한다. 렌더러는 컷 수를 자동 인식하고 Typecast 발화 시점에 맞춰 하드컷과 자막을 전환하며, Noto Serif KR 자막·부드러운 그림자·우측 상단 `[광고]`를 적용한다. API 키는 채팅이나 저장소에 넣지 않는다.
 
 대본 규칙 검사:
 
