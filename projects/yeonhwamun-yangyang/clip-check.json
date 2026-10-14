@@ -1,0 +1,207 @@
+{
+  "expected_clip_count": 20,
+  "checked_clip_count": 20,
+  "errors": [],
+  "clips": [
+    {
+      "index": 1,
+      "file": "01.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 2,
+      "file": "02.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 3,
+      "file": "03.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 4,
+      "file": "04.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 5,
+      "file": "05.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 6,
+      "file": "06.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 7,
+      "file": "07.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 8,
+      "file": "08.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 9,
+      "file": "09.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 10,
+      "file": "10.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 11,
+      "file": "11.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 12,
+      "file": "12.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 13,
+      "file": "13.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 14,
+      "file": "14.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 15,
+      "file": "15.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 16,
+      "file": "16.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 17,
+      "file": "17.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 18,
+      "file": "18.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 19,
+      "file": "19.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    },
+    {
+      "index": 20,
+      "file": "20.mp4",
+      "warnings": [],
+      "codec": "h264",
+      "width": 720,
+      "height": 1280,
+      "frame_rate": "24/1",
+      "duration": 6.041667
+    }
+  ]
+}

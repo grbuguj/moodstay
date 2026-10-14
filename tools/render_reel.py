@@ -210,6 +210,19 @@ def ffmpeg_filter_path(path: Path) -> str:
     return path.name.replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
 
 
+def ffmpeg_absolute_filter_path(path: Path) -> str:
+    return str(path).replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
+
+
+def ffmpeg_drawtext_text(text: str) -> str:
+    return (
+        text.replace("\\", r"\\")
+        .replace("'", r"\'")
+        .replace(":", r"\:")
+        .replace("%", r"\%")
+    )
+
+
 def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, segments: Sequence[Segment], output: Path, workdir: Path, audio_duration: float | None = None, speed: float = 1.0, ad_label: str = "[광고]") -> None:
     boundaries = [0.0] + [segment.start for segment in segments[1:]]
     # Preserve the real end of the voice file. Cutting at the last spoken Korean
@@ -239,14 +252,43 @@ def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, seg
         video_labels.append(f"[{label}]")
     filters.append(f"{''.join(video_labels)}concat=n={len(clips)}:v=1:a=0[vbase]")
     srt_filter_path = ffmpeg_filter_path(srt)
-    filters.append(
-        f"[vbase]subtitles=filename='{srt_filter_path}':force_style="
-        "'FontName=Noto Serif KR,FontSize=72,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-        "BorderStyle=1,Outline=2,Shadow=6,Alignment=5,MarginL=80,MarginR=80,MarginV=0'[vcaption]"
-    )
+    font_name = "Noto Serif KR"
+    drawtext_font = "font='Noto Serif KR'"
+    windows_fonts = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+    windows_font = windows_fonts / "malgun.ttf"
+    windows_bold_font = windows_fonts / "malgunbd.ttf"
+    if windows_font.is_file():
+        # Windows FFmpeg builds may not ship a default Fontconfig file. Point
+        # drawtext at an explicit Korean-capable font file.
+        font_name = "Malgun Gothic"
+        font_file = ffmpeg_absolute_filter_path(windows_bold_font if windows_bold_font.is_file() else windows_font)
+        drawtext_font = f"fontfile='{font_file}'"
+    if os.name == "nt" and windows_font.is_file():
+        # Recent Windows FFmpeg/libass builds can crash while initializing the
+        # DirectWrite subtitle provider. Draw each caption directly instead;
+        # the same segment timestamps still drive both the cut and its text.
+        previous = "vbase"
+        for index, segment in enumerate(segments):
+            current = f"caption{index}"
+            caption = ffmpeg_drawtext_text(segment.text)
+            filters.append(
+                f"[{previous}]drawtext=text='{caption}':{drawtext_font}:fontsize=72:"
+                "fontcolor=white:borderw=5:bordercolor=black@0.95:shadowx=3:shadowy=3:"
+                f"shadowcolor=black@0.75:x=(w-text_w)/2:y=(h-text_h)/2:"
+                f"enable='gte(t,{boundaries[index]:.6f})*lt(t,{boundaries[index + 1]:.6f})'[{current}]"
+            )
+            previous = current
+        caption_output = previous
+    else:
+        filters.append(
+            f"[vbase]subtitles=filename='{srt_filter_path}':force_style="
+            f"'FontName={font_name},FontSize=72,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+            "BorderStyle=1,Outline=2,Shadow=6,Alignment=5,MarginL=80,MarginR=80,MarginV=0'[vcaption]"
+        )
+        caption_output = "vcaption"
     escaped_ad = ad_label.replace("'", r"\'").replace(":", r"\:")
     filters.append(
-        "[vcaption]drawtext=text='" + escaped_ad + "':font='Noto Serif KR':fontsize=30:"
+        "[" + caption_output + "]drawtext=text='" + escaped_ad + "':" + drawtext_font + ":fontsize=30:"
         "fontcolor=white:borderw=1:bordercolor=black@0.8:x=w-text_w-42:y=42[vout]"
     )
     filter_complex = ";".join(filters)
@@ -259,11 +301,19 @@ def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, seg
         "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-14:TP=-1.0:LRA=7",
         "-movflags", "+faststart", str(output),
     ]
-    result = subprocess.run(command, cwd=workdir, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = subprocess.run(
+        command,
+        cwd=workdir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if result.returncode:
         detail = result.stderr.strip().splitlines()
         causes = [line for line in detail if any(word in line.casefold() for word in ("error", "invalid", "failed"))]
-        raise RuntimeError("FFmpeg render failed: " + " | ".join(causes[-8:] or detail[-8:]))
+        diagnostic = causes[-8:] if causes else detail[-20:]
+        raise RuntimeError("FFmpeg render failed: " + " | ".join(diagnostic))
 
 
 def main() -> int:

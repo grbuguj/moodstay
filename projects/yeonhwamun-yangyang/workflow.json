@@ -1,13 +1,13 @@
 {
   "property_name": "연화문호텔 양양",
   "slug": "yeonhwamun-yangyang",
-  "current_stage": "upscaled_visual_pack_ready",
+  "current_stage": "final_video_ready",
   "angle_candidates": [
     "양양에서 바다뷰 대신 고른, 조용한 한옥 감성 힐링 스테이",
     "객실별 히노끼탕/욕조가 만드는 비 오는 날 양양 휴식",
     "여행은 왔지만 북적이는 바다 대신 제대로 쉬고 싶은 커플·친구 여행"
   ],
-  "next_action": "Generate one Grok video per V image using video_prompts.md, save the approved results as clips/01.mp4 through clips/20.mp4, then run verification and the final renderer.",
+  "next_action": "Choose one of five thumbnail copy candidates, then generate the final thumbnail from the first-frame visual.",
   "facts_locked": true,
   "assets": {
     "source_photos": "photo_manifest.json",
@@ -20,6 +20,8 @@
     "original_stills": "still-pack/V01.png through V20.png (preserved fallback set)",
     "upscale_contact_sheet": "output/upscaled-still-contact-sheet.jpg",
     "upscale_delivery_zip": "output/yeonhwamun-yangyang-grok-pack-upscaled.zip",
+    "final_video": "output/final_reel.mp4",
+    "clip_verification": "clip-check.json (20 clips checked, zero errors and zero warnings)",
     "locked_timing": "output/typecast_timestamps.json",
     "locked_audio": "output/narration.wav"
   },
