@@ -281,7 +281,7 @@ def main() -> int:
         print(f"VALID: {len(clips)} clips and {len(captions)} caption lines")
         for i, (clip, caption) in enumerate(zip(clips, captions), start=1):
             print(f"{i:02d}  {clip.name}  |  {caption}")
-        print("Typecast -> word/character timing -> aligned cuts -> burned-in subtitles -> H.264/AAC 1080x1920 @ 30fps")
+        print("Locked Typecast timing -> aligned cuts -> burned-in subtitles -> H.264/AAC 1080x1920 @ 30fps")
         return 0
 
     if output_video.exists() and not args.force:
