@@ -4,6 +4,8 @@ When the user supplies only a lodging name, treat it as a request to continue th
 
 Keep every phase explicit and truthful: a source page is not proof of image redistribution rights; a prompt is not a generated clip; a render command succeeding is not final QA. Never claim a stage is complete without its named artifact/check. Do not commit photo/video assets to a public GitHub repository unless the user's rights specifically permit that redistribution. Store reusable prompts, scripts, source links, selection rationale, rights status, and resume state in Git-tracked project files. Keep API keys out of Git and chat.
 
+Visual direction for every Moodstay reel: make it feel like a real guest's visit, not a polished virtual tour. Use real property reference photos as the factual/visual anchor. Selectively add a few AI-generated first-person POV stills only where they create a strong experiential beat; base them on real reference images and never invent or alter amenities, layout, or views. Keep the source scene, people, furniture, and objects still in image-to-video. The default camera is locked; if motion helps, use only a nearly imperceptible, slow, steady 2D move. Build energy with shot order, hard cuts, and captions—not camera movement or object animation. Intentional image callbacks are allowed when they reinforce the story.
+
 Non-negotiable output rules:
 
 - Never say the lodging's proper name in the narration. The unanswered identity is part of the comment strategy.
