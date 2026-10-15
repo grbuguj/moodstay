@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "property": "양평 비바코스테이",
+  "project_slug": "vivacostay-reel",
+  "current_stage": "published",
+  "completed_stages": [
+    "research_ready",
+    "storyboard_ready",
+    "generation_pack_ready",
+    "clips_received",
+    "tts_rendered",
+    "captions_synced",
+    "thumbnail_ready",
+    "published"
+  ],
+  "next_action": "Record Instagram performance metrics after enough distribution time and compare hook retention against the previous post.",
+  "published_date": "2026-10-15",
+  "external_assets_tracked_in_git": false
+}

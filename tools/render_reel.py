@@ -1,13 +1,12 @@
-"""Render a variable-shot vertical Reel with Typecast narration and aligned captions.
+"""Render a Moodstay Reel with one continuous Typecast take and frame-exact cuts.
 
-Input folder contract:
-  clips/01.mp4 ... clips/NN.mp4
-  script.txt (one non-empty caption/narration fragment per shot)
+Project contract:
+  script.txt      one caption per EDIT cut
+  narration.txt   the same words as one naturally punctuated TTS paragraph
+  clips/          unique generated clips
+  render.json     optional settings and cut-to-clip mapping (callbacks supported)
 
-Timing is prepared before clips are generated with tools/prepare_reel_timing.py.
-The final render reuses that exact narration WAV and character timestamps;
-it never synthesizes a second, potentially different voice track.
-
+Secrets are read only from TYPECAST_API_KEY and TYPECAST_VOICE_ID.
 FFmpeg and FFprobe must be available on PATH.
 """
 
@@ -16,19 +15,22 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
-import unicodedata
 import shutil
 import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Sequence
 
 
-FPS = 30
-WIDTH = 1080
-HEIGHT = 1920
+DEFAULTS = {
+    "video": {"width": 1080, "height": 1920, "fps": 30, "playback_speed": 1.0, "crf": 18},
+    "typecast": {"model": "ssfm-v30", "emotion": "normal", "emotion_intensity": 1.0, "audio_tempo": 1.2, "target_lufs": -16.0},
+    "subtitle": {"font_name": "Noto Serif KR", "font_size": 72, "outline": 2.7, "shadow": 7.5, "blur": 5.0},
+    "ad": {"label": "[광고]", "font_name": "Noto Serif KR", "font_size": 30, "margin_right": 39, "margin_top": 39},
+}
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,20 @@ class Segment:
     text: str
     start: float
     end: float
+
+
+@dataclass(frozen=True)
+class Cut:
+    clip: Path
+    source_start: float = 0.35
+
+
+def significant(char: str) -> bool:
+    return not char.isspace() and not unicodedata.category(char).startswith("P")
+
+
+def compact(text: str) -> str:
+    return "".join(char for char in text if significant(char))
 
 
 def read_script(path: Path) -> list[str]:
@@ -46,39 +62,72 @@ def read_script(path: Path) -> list[str]:
     return lines
 
 
-def find_clips(folder: Path, shot_count: int) -> list[Path]:
-    clips_dir = folder / "clips"
-    clips: list[Path] = []
-    for index in range(1, shot_count + 1):
+def read_narration(folder: Path, captions: Sequence[str]) -> str:
+    path = folder / "narration.txt"
+    text = path.read_text(encoding="utf-8-sig").strip() if path.is_file() else " ".join(captions)
+    if compact(text) != compact(" ".join(captions)):
+        raise ValueError("narration.txt and script.txt must contain exactly the same spoken words; only spacing and punctuation may differ.")
+    return text
+
+
+def deep_merge(base: dict, override: dict) -> dict:
+    result = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_config(folder: Path) -> dict:
+    path = folder / "render.json"
+    user = json.loads(path.read_text(encoding="utf-8-sig")) if path.is_file() else {}
+    config = deep_merge(DEFAULTS, user)
+    if config.get("schema_version", 1) not in (1, 2):
+        raise ValueError("Unsupported render.json schema_version")
+    if config.get("typecast", {}).get("remove_silence_ms") not in (None, 0):
+        raise ValueError("Do not use Typecast remove_silence_ms: it can desynchronize returned timestamps from the compressed audio.")
+    return config
+
+
+def find_sequential_clips(folder: Path, count: int) -> list[Cut]:
+    cuts: list[Cut] = []
+    for index in range(1, count + 1):
         stem = f"{index:02d}"
-        matches = [clips_dir / f"{stem}{ext}" for ext in (".mp4", ".mov", ".m4v")]
+        matches = [folder / "clips" / f"{stem}{ext}" for ext in (".mp4", ".mov", ".m4v")]
         present = [path for path in matches if path.is_file()]
         if len(present) != 1:
             found = ", ".join(path.name for path in present) or "none"
-            raise FileNotFoundError(f"Expected exactly one clip named {stem}.mp4/.mov/.m4v in {clips_dir}; found: {found}")
-        clips.append(present[0])
-    valid = {f"{index:02d}" for index in range(1, shot_count + 1)}
-    extra = [p.name for p in clips_dir.iterdir() if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".m4v"} and p.stem not in valid]
-    if extra:
-        raise ValueError("Unexpected video filenames in clips/: " + ", ".join(sorted(extra)))
-    return clips
+            raise FileNotFoundError(f"Expected exactly one clip for cut {stem}; found: {found}")
+        cuts.append(Cut(present[0]))
+    return cuts
+
+
+def load_cuts(folder: Path, captions: Sequence[str], config: dict) -> list[Cut]:
+    entries = config.get("cuts")
+    if not entries:
+        return find_sequential_clips(folder, len(captions))
+    if len(entries) != len(captions):
+        raise ValueError(f"render.json has {len(entries)} cuts but script.txt has {len(captions)} lines")
+    clips_root = (folder / "clips").resolve()
+    cuts: list[Cut] = []
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict) or not entry.get("clip"):
+            raise ValueError(f"render.json cut {index} must contain a clip filename")
+        clip = (clips_root / str(entry["clip"])).resolve()
+        if clips_root not in clip.parents:
+            raise ValueError(f"render.json cut {index} points outside clips/: {entry['clip']}")
+        if not clip.is_file():
+            raise FileNotFoundError(f"Missing clip for cut {index}: {clip}")
+        start = float(entry.get("source_start", 0.35))
+        if start < 0:
+            raise ValueError(f"source_start cannot be negative for cut {index}")
+        cuts.append(Cut(clip, start))
+    return cuts
 
 
 def align_caption_segments(captions: Sequence[str], aligned_characters: Sequence[object], audio_duration: float) -> list[Segment]:
-    """Map exact caption text to Typecast character-level timestamps."""
-    def significant(char: str) -> bool:
-        return not char.isspace() and not unicodedata.category(char).startswith("P")
-
-    aligned_text = "".join(str(item.text) for item in aligned_characters)
-    transcript = " ".join(captions)
-    if aligned_text != transcript:
-        # Some services omit whitespace alignment. Support that without guessing timings.
-        compact_aligned = "".join(ch for ch in aligned_text if significant(ch))
-        compact_transcript = "".join(ch for ch in transcript if significant(ch))
-        if compact_aligned != compact_transcript:
-            raise ValueError("Typecast character alignment does not match script.txt; refusing to burn unsynchronized captions.")
-
-    # Expand grouped fragments into character timing entries, preserving each fragment's interval.
     timed_chars: list[tuple[str, float, float]] = []
     for item in aligned_characters:
         fragment = str(item.text)
@@ -89,40 +138,43 @@ def align_caption_segments(captions: Sequence[str], aligned_characters: Sequence
         for i, char in enumerate(fragment):
             timed_chars.append((char, start + span * i / len(fragment), start + span * (i + 1) / len(fragment)))
 
-    # Compare non-space characters and retain indices back to the timed array.
+    transcript = " ".join(captions)
     nonspace = [(char, i) for i, (char, _, _) in enumerate(timed_chars) if significant(char)]
-    wanted = [(char, i) for i, char in enumerate(transcript) if significant(char)]
-    if len(nonspace) != len(wanted) or any(a[0] != b[0] for a, b in zip(nonspace, wanted)):
-        raise ValueError("Typecast character alignment could not be mapped to script.txt.")
+    wanted = [char for char in transcript if significant(char)]
+    if len(nonspace) != len(wanted) or any(actual[0] != expected for actual, expected in zip(nonspace, wanted)):
+        raise ValueError("Typecast character alignment does not match script.txt; refusing to render unsynchronized captions.")
 
     segments: list[Segment] = []
     cursor = 0
     for caption in captions:
-        count = sum(significant(char) for char in caption)
+        count = len(compact(caption))
         picked = nonspace[cursor : cursor + count]
         if not picked:
             raise ValueError(f"No speech timing found for caption: {caption}")
-        first_index, last_index = picked[0][1], picked[-1][1]
-        start = timed_chars[first_index][1]
-        end = timed_chars[last_index][2]
-        if end <= start:
-            raise ValueError(f"Invalid speech timing for caption: {caption}")
-        segments.append(Segment(caption, start, min(end, audio_duration)))
+        first, last = picked[0][1], picked[-1][1]
+        segments.append(Segment(caption, timed_chars[first][1], min(timed_chars[last][2], audio_duration)))
         cursor += count
     return segments
 
 
-def caption_display_segments(segments: Sequence[Segment], audio_duration: float) -> list[Segment]:
-    """Make caption visibility use the exact same boundaries as the video cuts."""
-    if not segments:
-        raise ValueError("At least one caption segment is required.")
-    if audio_duration < segments[-1].end:
-        raise ValueError("Audio duration cannot end before the final caption.")
-    boundaries = [0.0] + [segment.start for segment in segments[1:]] + [audio_duration]
-    return [
-        Segment(segment.text, boundaries[index], boundaries[index + 1])
-        for index, segment in enumerate(segments)
-    ]
+def frame_boundaries(segments: Sequence[Segment], audio_duration: float, fps: int) -> tuple[float, list[int]]:
+    first_speech = segments[0].start
+    seconds = [0.0] + [max(0.0, segment.start - first_speech) for segment in segments[1:]] + [max(0.0, audio_duration - first_speech)]
+    frames: list[int] = []
+    for index, value in enumerate(seconds):
+        frame = round(value * fps)
+        if index:
+            frame = max(frame, frames[-1] + 1)
+        frames.append(frame)
+    return first_speech, frames
+
+
+def ass_time(seconds: float) -> str:
+    centiseconds = max(0, round(seconds * 100))
+    hours, remainder = divmod(centiseconds, 360_000)
+    minutes, remainder = divmod(remainder, 6_000)
+    secs, cs = divmod(remainder, 100)
+    return f"{hours}:{minutes:02d}:{secs:02d}.{cs:02d}"
 
 
 def srt_timestamp(seconds: float) -> str:
@@ -134,33 +186,36 @@ def srt_timestamp(seconds: float) -> str:
 
 
 def write_srt(path: Path, segments: Sequence[Segment]) -> None:
-    cues = []
+    cues: list[str] = []
     for index, segment in enumerate(segments, start=1):
         cues.extend((str(index), f"{srt_timestamp(segment.start)} --> {srt_timestamp(segment.end)}", segment.text, ""))
     path.write_text("\n".join(cues), encoding="utf-8-sig")
 
 
-def character_payload(characters: Sequence[object]) -> list[dict[str, float | str]]:
-    """Persist the minimal Typecast character timing contract as JSON."""
-    return [
-        {"text": str(item.text), "start": float(item.start), "end": float(item.end)}
-        for item in characters
-    ]
+def write_ass(path: Path, captions: Sequence[str], frames: Sequence[int], config: dict) -> None:
+    video, subtitle, ad = config["video"], config["subtitle"], config["ad"]
+    fps, width, height = int(video["fps"]), int(video["width"]), int(video["height"])
+    header = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: {width}
+PlayResY: {height}
+ScaledBorderAndShadow: yes
 
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Moodstay,{subtitle['font_name']},{subtitle['font_size']},&H00FFFFFF,&H00000000,&H00101010,&H70000000,0,0,0,0,100,100,0,0,1,{subtitle['outline']},{subtitle['shadow']},5,44,44,0,1
+Style: Ad,{ad['font_name']},{ad['font_size']},&H00FFFFFF,&H00000000,&H00101010,&H70000000,0,0,0,0,100,100,0,0,1,0.8,1.6,9,18,{ad['margin_right']},{ad['margin_top']},1
 
-def load_timing(path: Path) -> tuple[float, list[object]]:
-    """Load the locked preflight timing without depending on Typecast classes."""
-    from types import SimpleNamespace
-
-    data = json.loads(path.read_text(encoding="utf-8"))
-    duration = float(data["audio_duration"])
-    characters = [
-        SimpleNamespace(text=item["text"], start=float(item["start"]), end=float(item["end"]))
-        for item in data["characters"]
-    ]
-    if duration <= 0 or not characters:
-        raise ValueError(f"Invalid or empty Typecast timing file: {path}")
-    return duration, characters
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+    events = []
+    for index, caption in enumerate(captions):
+        start, end = frames[index] / fps, frames[index + 1] / fps
+        events.append(f"Dialogue: 0,{ass_time(start)},{ass_time(end)},Moodstay,,0,0,0,,{{\\pos({width // 2},{height // 2})\\blur{subtitle['blur']}\\shad{subtitle['shadow']}}}{caption}")
+    total = frames[-1] / fps
+    events.append(f"Dialogue: 1,0:00:00.00,{ass_time(total)},Ad,,0,0,0,,{{\\blur1.2}}{ad['label']}")
+    path.write_text(header + "\n".join(events) + "\n", encoding="utf-8-sig")
 
 
 def require_tool(name: str) -> str:
@@ -170,212 +225,167 @@ def require_tool(name: str) -> str:
     return path
 
 
-def generate_typecast_audio(text: str, out_path: Path):
+def probe_duration(ffprobe: str, path: Path) -> float:
+    result = subprocess.run([ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(path)], check=True, capture_output=True, text=True)
+    return float(result.stdout.strip())
+
+
+def generate_typecast_audio(text: str, out_path: Path, settings: dict):
     api_key = os.environ.get("TYPECAST_API_KEY")
-    voice_id = os.environ.get("TYPECAST_VOICE_ID")
+    voice_id = os.environ.get("TYPECAST_VOICE_ID") or settings.get("voice_id")
     if not api_key or not voice_id:
-        raise RuntimeError("Set TYPECAST_API_KEY and TYPECAST_VOICE_ID before rendering. Do not put API keys in job files or commit them.")
+        raise RuntimeError("Set TYPECAST_API_KEY in the current shell and provide TYPECAST_VOICE_ID either in the shell or render.json.")
     try:
         from typecast import Typecast
-        from typecast.models import Output, SmartPrompt, TTSModel, TTSRequestWithTimestamps
+        from typecast.models import Output, PresetPrompt, TTSModel, TTSRequestWithTimestamps
     except ImportError as exc:
         raise RuntimeError("Typecast SDK missing. Install with: python -m pip install -r requirements.txt") from exc
-
-    client = Typecast(api_key=api_key)
+    if settings.get("model", "ssfm-v30").casefold() != "ssfm-v30":
+        raise ValueError("This workflow currently supports Typecast ssfm-v30 only")
     request = TTSRequestWithTimestamps(
         text=text,
         voice_id=voice_id,
         model=TTSModel.SSFM_V30,
         language="kor",
-        prompt=SmartPrompt(emotion_type="smart"),
-        output=Output(volume=None, target_lufs=-16.0, audio_format="wav"),
+        prompt=PresetPrompt(emotion_type="preset", emotion_preset=str(settings.get("emotion", "normal")), emotion_intensity=float(settings.get("emotion_intensity", 1.0))),
+        output=Output(target_lufs=float(settings.get("target_lufs", -16.0)), audio_tempo=float(settings.get("audio_tempo", 1.2)), audio_format="wav"),
     )
-    response = client.text_to_speech_with_timestamps(request, granularity="char")
+    response = Typecast(api_key=api_key).text_to_speech_with_timestamps(request, granularity="char")
     response.save_audio(str(out_path))
     return response
 
 
-def probe_duration(ffprobe: str, path: Path) -> float:
-    result = subprocess.run(
-        [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return float(result.stdout.strip())
+def save_alignment(path: Path, narration: str, audio_duration: float, characters: Sequence[object]) -> None:
+    payload = {
+        "narration": narration,
+        "audio_duration": audio_duration,
+        "characters": [{"text": str(item.text), "start": float(item.start), "end": float(item.end)} for item in characters],
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_alignment(path: Path, narration: str) -> tuple[float, list[object]]:
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    if compact(str(payload.get("narration", ""))) != compact(narration):
+        raise ValueError("Saved Typecast alignment belongs to different narration text")
+    characters = [SimpleNamespace(**item) for item in payload.get("characters", [])]
+    if not characters:
+        raise ValueError("Saved Typecast alignment has no characters")
+    return float(payload["audio_duration"]), characters
 
 
 def ffmpeg_filter_path(path: Path) -> str:
-    # Keep the SRT path relative to the project working directory to avoid drive-letter escaping.
     return path.name.replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
 
 
-def ffmpeg_absolute_filter_path(path: Path) -> str:
-    return str(path).replace("\\", "/").replace(":", r"\:").replace("'", r"\'")
-
-
-def ffmpeg_drawtext_text(text: str) -> str:
-    return (
-        text.replace("\\", r"\\")
-        .replace("'", r"\'")
-        .replace(":", r"\:")
-        .replace("%", r"\%")
-    )
-
-
-def render_video(ffmpeg: str, clips: Sequence[Path], audio: Path, srt: Path, segments: Sequence[Segment], output: Path, workdir: Path, audio_duration: float | None = None, speed: float = 1.0, ad_label: str = "[광고]") -> None:
-    boundaries = [0.0] + [segment.start for segment in segments[1:]]
-    # Preserve the real end of the voice file. Cutting at the last spoken Korean
-    # character can chop its trailing punctuation, breath, or natural release.
-    total = audio_duration if audio_duration is not None else segments[-1].end
-    if total < segments[-1].end:
-        raise ValueError("Audio duration cannot end before the final caption.")
-    boundaries.append(total)
-    durations = [max(0.05, boundaries[i + 1] - boundaries[i]) for i in range(len(clips))]
-
+def render_aligned_video(ffmpeg: str, cuts: Sequence[Cut], audio: Path, ass: Path, first_speech: float, frames: Sequence[int], config: dict, output: Path, workdir: Path) -> None:
+    video = config["video"]
+    fps, width, height = int(video["fps"]), int(video["width"]), int(video["height"])
+    speed, crf = float(video.get("playback_speed", 1.0)), int(video.get("crf", 18))
+    if speed <= 0:
+        raise ValueError("video.playback_speed must be positive")
+    durations = [(frames[i + 1] - frames[i]) / fps for i in range(len(cuts))]
     inputs: list[str] = []
-    for clip in clips:
-        inputs.extend(("-i", str(clip)))
-    audio_index = len(clips)
+    for cut in cuts:
+        inputs.extend(("-i", str(cut.clip)))
+    audio_index = len(cuts)
     inputs.extend(("-i", str(audio)))
-
-    filters = []
-    video_labels = []
-    for index, duration in enumerate(durations):
+    filters: list[str] = []
+    labels: list[str] = []
+    for index, (cut, duration) in enumerate(zip(cuts, durations)):
         label = f"v{index}"
         filters.append(
-            f"[{index}:v]scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-            f"crop={WIDTH}:{HEIGHT},setsar=1,fps={FPS},setpts=(PTS-STARTPTS)/{speed:.6f},"
-            f"trim=duration={duration:.6f},tpad=stop_mode=clone:stop_duration={duration:.6f},"
-            f"trim=duration={duration:.6f},setpts=PTS-STARTPTS[{label}]"
+            f"[{index}:v]trim=start={cut.source_start:.6f},setpts=PTS-STARTPTS,setpts=PTS/{speed:.6f},fps={fps},"
+            f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1,"
+            f"tpad=stop_mode=clone:stop_duration=60,trim=duration={duration:.6f},setpts=PTS-STARTPTS[{label}]"
         )
-        video_labels.append(f"[{label}]")
-    filters.append(f"{''.join(video_labels)}concat=n={len(clips)}:v=1:a=0[vbase]")
-    srt_filter_path = ffmpeg_filter_path(srt)
-    font_name = "Noto Serif KR"
-    drawtext_font = "font='Noto Serif KR'"
-    windows_fonts = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
-    windows_font = windows_fonts / "malgun.ttf"
-    windows_bold_font = windows_fonts / "malgunbd.ttf"
-    if windows_font.is_file():
-        # Windows FFmpeg builds may not ship a default Fontconfig file. Point
-        # drawtext at an explicit Korean-capable font file.
-        font_name = "Malgun Gothic"
-        font_file = ffmpeg_absolute_filter_path(windows_bold_font if windows_bold_font.is_file() else windows_font)
-        drawtext_font = f"fontfile='{font_file}'"
-    if os.name == "nt" and windows_font.is_file():
-        # Recent Windows FFmpeg/libass builds can crash while initializing the
-        # DirectWrite subtitle provider. Draw each caption directly instead;
-        # the same segment timestamps still drive both the cut and its text.
-        previous = "vbase"
-        for index, segment in enumerate(segments):
-            current = f"caption{index}"
-            caption = ffmpeg_drawtext_text(segment.text)
-            filters.append(
-                f"[{previous}]drawtext=text='{caption}':{drawtext_font}:fontsize=72:"
-                "fontcolor=white:borderw=5:bordercolor=black@0.95:shadowx=3:shadowy=3:"
-                f"shadowcolor=black@0.75:x=(w-text_w)/2:y=(h-text_h)/2:"
-                f"enable='gte(t,{boundaries[index]:.6f})*lt(t,{boundaries[index + 1]:.6f})'[{current}]"
-            )
-            previous = current
-        caption_output = previous
-    else:
-        filters.append(
-            f"[vbase]subtitles=filename='{srt_filter_path}':force_style="
-            f"'FontName={font_name},FontSize=72,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-            "BorderStyle=1,Outline=2,Shadow=6,Alignment=5,MarginL=80,MarginR=80,MarginV=0'[vcaption]"
-        )
-        caption_output = "vcaption"
-    escaped_ad = ad_label.replace("'", r"\'").replace(":", r"\:")
-    filters.append(
-        "[" + caption_output + "]drawtext=text='" + escaped_ad + "':" + drawtext_font + ":fontsize=30:"
-        "fontcolor=white:borderw=1:bordercolor=black@0.8:x=w-text_w-42:y=42[vout]"
-    )
-    filter_complex = ";".join(filters)
+        labels.append(f"[{label}]")
+    filters.append(f"{''.join(labels)}concat=n={len(cuts)}:v=1:a=0[vbase]")
+    filters.append(f"[vbase]subtitles=filename='{ffmpeg_filter_path(ass)}'[vout]")
+    total = frames[-1] / fps
+    filters.append(f"[{audio_index}:a]atrim=start={first_speech:.6f},asetpts=PTS-STARTPTS,atrim=duration={total:.6f},asetpts=PTS-STARTPTS[aout]")
     command = [
-        ffmpeg, "-hide_banner", "-y", *inputs,
-        "-filter_complex", filter_complex,
-        "-map", "[vout]", "-map", f"{audio_index}:a:0",
-        "-t", f"{total:.6f}", "-r", str(FPS),
-        "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-14:TP=-1.0:LRA=7",
-        "-movflags", "+faststart", str(output),
+        ffmpeg, "-hide_banner", "-y", *inputs, "-filter_complex", ";".join(filters),
+        "-map", "[vout]", "-map", "[aout]", "-t", f"{total:.6f}",
+        "-c:v", "libx264", "-preset", "medium", "-crf", str(crf), "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", str(output),
     ]
-    result = subprocess.run(
-        command,
-        cwd=workdir,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    result = subprocess.run(command, cwd=workdir, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode:
-        detail = result.stderr.strip().splitlines()
-        causes = [line for line in detail if any(word in line.casefold() for word in ("error", "invalid", "failed"))]
-        diagnostic = causes[-8:] if causes else detail[-20:]
-        raise RuntimeError("FFmpeg render failed: " + " | ".join(diagnostic))
+        lines = result.stderr.strip().splitlines()
+        causes = [line for line in lines if any(word in line.casefold() for word in ("error", "invalid", "failed"))]
+        raise RuntimeError("FFmpeg render failed: " + " | ".join(causes[-8:] or lines[-8:]))
 
 
 def main() -> int:
-    # Windows PowerShell may use a legacy console code page; paths and help include Korean.
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("project", type=Path, help="Reel project folder with script.txt and consecutively numbered clips")
-    parser.add_argument("--dry-run", action="store_true", help="Validate files and print the render plan without calling Typecast")
-    parser.add_argument("--force", action="store_true", help="Allow replacing generated files in the project's output/ folder")
-    parser.add_argument("--speed", type=float, default=1.0, help="Visual playback speed inside each cut (for example 1.2)")
-    parser.add_argument("--ad-label", default="[광고]", help="Small disclosure label shown in the top-right")
+    parser.add_argument("project", type=Path)
+    parser.add_argument("--dry-run", action="store_true", help="Validate project files without calling Typecast")
+    parser.add_argument("--force", action="store_true", help="Replace output/final_reel.mp4")
+    parser.add_argument("--reuse-tts", action="store_true", help="Reuse output/narration.wav and output/typecast_timestamps.json")
+    parser.add_argument("--speed", type=float, help="Override render.json video.playback_speed")
+    parser.add_argument("--ad-label", help="Override the top-right disclosure text")
     args = parser.parse_args()
 
     folder = args.project.resolve()
-    script_path = folder / "script.txt"
-    if not script_path.is_file():
-        raise FileNotFoundError(f"Missing {script_path}")
-    captions = read_script(script_path)
-    clips = find_clips(folder, len(captions))
-    ffmpeg = require_tool("ffmpeg")
-    ffprobe = require_tool("ffprobe")
-    output_dir = folder / "output"
-    output_video = output_dir / "final_reel.mp4"
+    captions = read_script(folder / "script.txt")
+    narration = read_narration(folder, captions)
+    config = load_config(folder)
+    if args.speed is not None:
+        config["video"]["playback_speed"] = args.speed
+    if args.ad_label is not None:
+        config["ad"]["label"] = args.ad_label
+    cuts = load_cuts(folder, captions, config)
+    ffmpeg, ffprobe = require_tool("ffmpeg"), require_tool("ffprobe")
 
     if args.dry_run:
-        print(f"VALID: {len(clips)} clips and {len(captions)} caption lines")
-        for i, (clip, caption) in enumerate(zip(clips, captions), start=1):
-            print(f"{i:02d}  {clip.name}  |  {caption}")
-        print("Locked Typecast timing -> aligned cuts -> burned-in subtitles -> H.264/AAC 1080x1920 @ 30fps")
+        print(f"VALID: {len(set(cut.clip for cut in cuts))} unique clips -> {len(cuts)} edit cuts/captions")
+        for index, (cut, caption) in enumerate(zip(cuts, captions), start=1):
+            print(f"{index:02d}  {cut.clip.name} @ {cut.source_start:.2f}s  |  {caption}")
+        print(f"Output: {config['video']['width']}x{config['video']['height']} @ {config['video']['fps']}fps")
+        print(f"Typecast: one continuous request, normal preset, tempo {config['typecast']['audio_tempo']}x, no API silence compression")
         return 0
 
-    if output_video.exists() and not args.force:
-        raise FileExistsError(f"{output_video} already exists. Review it, then pass --force to replace it.")
+    output_dir = folder / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
+    output_video = output_dir / "final_reel.mp4"
+    if output_video.exists() and not args.force:
+        raise FileExistsError(f"{output_video} exists; pass --force after reviewing the current file")
     audio_path = output_dir / "narration.wav"
-    srt_path = output_dir / "captions.srt"
     timestamps_path = output_dir / "typecast_timestamps.json"
+    if args.reuse_tts:
+        if not audio_path.is_file() or not timestamps_path.is_file():
+            raise FileNotFoundError("--reuse-tts needs output/narration.wav and output/typecast_timestamps.json")
+        audio_duration, characters = load_alignment(timestamps_path, narration)
+    else:
+        print("Generating one continuous Typecast narration...")
+        response = generate_typecast_audio(narration, audio_path, config["typecast"])
+        characters = list(response.characters or [])
+        if not characters:
+            raise RuntimeError("Typecast returned no character timestamps")
+        audio_duration = probe_duration(ffprobe, audio_path)
+        save_alignment(timestamps_path, narration, audio_duration, characters)
 
-    if not audio_path.is_file() or not timestamps_path.is_file():
-        raise FileNotFoundError(
-            "Missing locked Typecast preflight. Run: python tools/prepare_reel_timing.py <project>"
-        )
-    print("Loading locked Typecast narration and character timings...")
-    duration, characters = load_timing(timestamps_path)
-    segments = align_caption_segments(captions, characters, duration)
-    write_srt(srt_path, caption_display_segments(segments, duration))
+    segments = align_caption_segments(captions, characters, audio_duration)
+    first_speech, frames = frame_boundaries(segments, audio_duration, int(config["video"]["fps"]))
+    ass_path = output_dir / "captions.ass"
+    write_ass(ass_path, captions, frames, config)
+    for index, cut in enumerate(cuts, start=1):
+        duration = probe_duration(ffprobe, cut.clip)
+        if duration <= cut.source_start + 0.05:
+            raise ValueError(f"Cut {index} starts after clip end: {cut.clip.name} @ {cut.source_start:.2f}s / {duration:.2f}s")
 
-    # Verify every input can supply its assigned interval; short videos are safely extended with a held final frame.
-    print("Checking clip durations...")
-    for clip, segment in zip(clips, segments):
-        available = probe_duration(ffprobe, clip)
-        if available < 0.15:
-            raise ValueError(f"Clip is too short or invalid: {clip}")
-        if available + 0.02 < segment.end - segment.start:
-            print(f"  {clip.name}: {available:.2f}s -> will hold final frame to cover {segment.end - segment.start:.2f}s")
-
-    print("Rendering vertical video...")
-    render_video(ffmpeg, clips, audio_path, srt_path, segments, output_video, output_dir, audio_duration=duration, speed=args.speed, ad_label=args.ad_label)
+    print("Rendering frame-aligned video/caption transitions...")
+    render_aligned_video(ffmpeg, cuts, audio_path, ass_path, first_speech, frames, config, output_video, output_dir)
+    rendered = probe_duration(ffprobe, output_video)
+    expected = frames[-1] / int(config["video"]["fps"])
+    if abs(rendered - expected) > 1 / int(config["video"]["fps"]) + 0.01:
+        raise RuntimeError(f"Final duration mismatch: expected {expected:.3f}s, got {rendered:.3f}s")
     print(f"DONE: {output_video}")
-    print(f"Audio: {audio_path}\nCaptions: {srt_path}\nTiming: {timestamps_path}")
+    print(f"Cuts/captions: {len(cuts)} | duration: {rendered:.3f}s | TTS: {audio_path} | captions: {ass_path}")
     return 0
 
 

@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "video": {"width": 720, "height": 1264, "fps": 24, "playback_speed": 1.0, "crf": 18},
+  "typecast": {
+    "model": "ssfm-v30",
+    "voice_id": "tc_68ddea1e462b169ddd20b74d",
+    "emotion": "normal",
+    "emotion_intensity": 1.0,
+    "audio_tempo": 1.2,
+    "target_lufs": -16.0,
+    "remove_silence_ms": null
+  },
+  "subtitle": {"font_name": "Noto Serif KR", "font_size": 48, "outline": 1.8, "shadow": 5.0, "blur": 5.0},
+  "ad": {"label": "[광고]", "font_name": "Noto Serif KR", "font_size": 20, "margin_right": 26, "margin_top": 26},
+  "cuts": [
+    {"clip": "01.mp4", "source_start": 0.35},
+    {"clip": "02.mp4", "source_start": 0.35},
+    {"clip": "03.mp4", "source_start": 0.35},
+    {"clip": "04.mp4", "source_start": 0.35},
+    {"clip": "05.mp4", "source_start": 0.35},
+    {"clip": "06.mp4", "source_start": 0.35},
+    {"clip": "07.mp4", "source_start": 0.35},
+    {"clip": "08.mp4", "source_start": 0.35},
+    {"clip": "09.mp4", "source_start": 0.35},
+    {"clip": "10.mp4", "source_start": 0.35},
+    {"clip": "11.mp4", "source_start": 0.35},
+    {"clip": "12.mp4", "source_start": 0.35},
+    {"clip": "06.mp4", "source_start": 2.0},
+    {"clip": "13.mp4", "source_start": 0.35},
+    {"clip": "14.mp4", "source_start": 0.35},
+    {"clip": "15.mp4", "source_start": 0.35},
+    {"clip": "16.mp4", "source_start": 0.35},
+    {"clip": "15.mp4", "source_start": 2.0},
+    {"clip": "02.mp4", "source_start": 2.3}
+  ]
+}

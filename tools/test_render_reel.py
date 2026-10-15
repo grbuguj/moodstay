@@ -9,7 +9,19 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from render_reel import Segment, align_caption_segments, caption_display_segments, read_script, render_video, srt_timestamp, write_srt
+from render_reel import (
+    Cut,
+    DEFAULTS,
+    Segment,
+    align_caption_segments,
+    frame_boundaries,
+    read_narration,
+    read_script,
+    render_aligned_video,
+    srt_timestamp,
+    write_ass,
+    write_srt,
+)
 
 
 class RenderReelTests(unittest.TestCase):
@@ -22,8 +34,6 @@ class RenderReelTests(unittest.TestCase):
         self.assertAlmostEqual(segments[0].start, 0.0)
         self.assertAlmostEqual(segments[0].end, 0.3)
         self.assertAlmostEqual(segments[1].start, 0.4)
-        # Punctuation is deliberately not part of the visible caption timing.
-        # The renderer preserves the audio tail separately.
         self.assertAlmostEqual(segments[1].end, 1.1)
 
     def test_alignment_mismatch_fails_instead_of_misaligning_subtitles(self):
@@ -41,12 +51,6 @@ class RenderReelTests(unittest.TestCase):
             self.assertIn("00:00:01,250 --> 00:00:02,500", text)
             self.assertIn("안녕하세요.", text)
 
-    def test_display_captions_share_exact_video_cut_boundaries(self):
-        spoken = [Segment("첫 자막", 0.2, 1.5), Segment("둘째 자막", 1.9, 2.8)]
-        displayed = caption_display_segments(spoken, audio_duration=3.2)
-        self.assertEqual(displayed[0], Segment("첫 자막", 0.0, 1.9))
-        self.assertEqual(displayed[1], Segment("둘째 자막", 1.9, 3.2))
-
     def test_script_accepts_variable_non_empty_lines(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "script.txt"
@@ -61,8 +65,24 @@ class RenderReelTests(unittest.TestCase):
     def test_srt_timestamp_rounds_to_milliseconds(self):
         self.assertEqual(srt_timestamp(61.2346), "00:01:01,235")
 
+    def test_narration_must_match_caption_words(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "narration.txt").write_text("서울에서 30분이면, 좋아요.", encoding="utf-8")
+            self.assertEqual(read_narration(root, ["서울에서", "30분이면", "좋아요"]), "서울에서 30분이면, 좋아요.")
+            (root / "narration.txt").write_text("서울에서 한 시간이면 좋아요.", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "same spoken words"):
+                read_narration(root, ["서울에서", "30분이면", "좋아요"])
+
+    def test_boundaries_are_monotonic_whole_frames(self):
+        segments = [Segment("하나", 0.2, 0.5), Segment("둘", 0.2, 0.8), Segment("셋", 0.21, 1.0)]
+        first, frames = frame_boundaries(segments, audio_duration=1.2, fps=24)
+        self.assertAlmostEqual(first, 0.2)
+        self.assertEqual(frames[0], 0)
+        self.assertTrue(all(right > left for left, right in zip(frames, frames[1:])))
+
     @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg is not installed")
-    def test_ffmpeg_renders_twenty_cuts_with_burned_captions(self):
+    def test_ffmpeg_renders_reused_clips_with_frame_aligned_captions(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             clip_template = root / "template.mp4"
@@ -70,23 +90,24 @@ class RenderReelTests(unittest.TestCase):
                 ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=navy:s=270x480:r=30:d=1", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(clip_template)],
                 check=True,
             )
-            clips_dir = root / "clips"
-            clips_dir.mkdir()
-            clips = []
-            for index in range(1, 21):
-                clip = clips_dir / f"{index:02d}.mp4"
-                shutil.copyfile(clip_template, clip)
-                clips.append(clip)
+            cuts = [Cut(clip_template, 0.0), Cut(clip_template, 0.1), Cut(clip_template, 0.2)]
             audio = root / "narration.wav"
             subprocess.run(
                 ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=2", "-t", "2", str(audio)],
                 check=True,
             )
-            segments = [Segment(f"컷 {index}", (index - 1) * 0.1, index * 0.1) for index in range(1, 21)]
-            srt = root / "captions.srt"
-            write_srt(srt, segments)
+            captions = ["첫 컷", "두 번째", "마지막"]
+            frames = [0, 15, 30, 48]
+            config = {
+                **DEFAULTS,
+                "video": {**DEFAULTS["video"], "width": 270, "height": 480, "fps": 30},
+                "subtitle": {**DEFAULTS["subtitle"], "font_size": 18},
+                "ad": {**DEFAULTS["ad"], "font_size": 10},
+            }
+            ass = root / "captions.ass"
+            write_ass(ass, captions, frames, config)
             output = root / "final.mp4"
-            render_video(shutil.which("ffmpeg"), clips, audio, srt, segments, output, root)
+            render_aligned_video(shutil.which("ffmpeg"), cuts, audio, ass, 0.0, frames, config, output, root)
             self.assertTrue(output.is_file())
             result = subprocess.run(
                 ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", str(output)],
@@ -94,7 +115,7 @@ class RenderReelTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-            self.assertEqual(result.stdout.strip(), "1080x1920")
+            self.assertEqual(result.stdout.strip(), "270x480")
 
 
 if __name__ == "__main__":

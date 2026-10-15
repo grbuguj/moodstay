@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "description": "Downloaded filename to stable project filename mapping. SHA-256 values identify the exact 2026-10-15 inputs without redistributing them.",
+  "clips": [
+    {"target_filename": "01.mp4", "source_filename": "imagine-83d82b9e.mp4", "sha256": "5b088475a91b68019d9934817dd9b41eafcdc430613aeef192c12502b771b6b8", "scene": "AI first-person mug and triangular stay"},
+    {"target_filename": "02.mp4", "source_filename": "imagine-49807e66.mp4", "sha256": "fa3fcd0e7aec081c354438038fd478a3fef30521a57af665bf0e859eebf897bd", "scene": "triangular stay hero"},
+    {"target_filename": "03.mp4", "source_filename": "imagine-92be01a2.mp4", "sha256": "88a0bccd9c3679e6da756c4d2ca8e1a5ff782f286c8c8d0834d93b6c406f5031", "scene": "triangular stay courtyard"},
+    {"target_filename": "04.mp4", "source_filename": "imagine-0948cfa8.mp4", "sha256": "9c9321383ecbdb1025d8839504b7143601eb6a664161b18634cea2fce8dcb36c", "scene": "fire close view"},
+    {"target_filename": "05.mp4", "source_filename": "imagine-7d99996a.mp4", "sha256": "fd73f437b17d70f069fe9094c3d72497cd1f699601174f95122274e7231356aa", "scene": "outdoor pool"},
+    {"target_filename": "06.mp4", "source_filename": "imagine-837238e0.mp4", "sha256": "79feac0dccfc40fd52f73803c84bbf75732f1f982059186dc593f9284a664840", "scene": "living room pool view"},
+    {"target_filename": "07.mp4", "source_filename": "imagine-5d3bb514.mp4", "sha256": "e2e4266b20271fa1d9a11669c3d95c48a2e88320846facbc5fb982397cbb44f9", "scene": "AI first-person tea in living room"},
+    {"target_filename": "08.mp4", "source_filename": "imagine-3903c435.mp4", "sha256": "de7942100427156f7316f069e2a2dad099aae3f5295d06731f3bc79bf24daef5", "scene": "living room wide"},
+    {"target_filename": "09.mp4", "source_filename": "imagine-b510186d.mp4", "sha256": "d55a2c9f96dc9a24c3e473c83ba38bc6621ba07fa13b20413aee5992c16a6de1", "scene": "common room"},
+    {"target_filename": "10.mp4", "source_filename": "imagine-a1dc4d60.mp4", "sha256": "3efafc4e7794101847ab5d03c0bdd449fe8ff004a7a93df7125b54c56009829c", "scene": "kitchen"},
+    {"target_filename": "11.mp4", "source_filename": "imagine-b92dc847.mp4", "sha256": "e6b42a331bc6fcb1d730df399037a42ddb52155f8091628395b322187062d0d3", "scene": "bedroom"},
+    {"target_filename": "12.mp4", "source_filename": "imagine-5b0ab2ff.mp4", "sha256": "4acb979e7bbefdc11a00234369082f340104b9e8089beb6183fdb120a1c67338", "scene": "tea detail"},
+    {"target_filename": "13.mp4", "source_filename": "imagine-45290db6.mp4", "sha256": "b35f618ce0b96ccd2d5bcfaa5904b24e71a638c610f3236a2e4369d31842cef1", "scene": "barbecue"},
+    {"target_filename": "14.mp4", "source_filename": "imagine-524c5e55.mp4", "sha256": "82fc467ff1177982ade74b0e831ce0f851488def531beefcbb066e0a6f97b9d3", "scene": "heated dome entry"},
+    {"target_filename": "15.mp4", "source_filename": "imagine-6b3df626.mp4", "sha256": "f03e840a00c9904cf585bcf64666b7c0a60120008a3f91883b21f370c5912096", "scene": "heated dome wide"},
+    {"target_filename": "16.mp4", "source_filename": "imagine-ecb2e5fa.mp4", "sha256": "87314ef4cf487dd7238b65d40376538008a2dd1511e230a31899ae5958a6a91d", "scene": "AI first-person heated dome relaxation"}
+  ]
+}
