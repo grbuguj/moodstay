@@ -1,6 +1,31 @@
 {
   "property": "케이브 료칸 by 아늑 성신여대점",
-  "status": "awaiting_user_photos",
-  "rights_note": "사용자가 제공하거나 사용권을 확인한 사진만 최종 산출물에 사용한다. 공개 Git 저장소에는 원본을 커밋하지 않는다.",
-  "photos": []
+  "status": "user_photos_received_ai_first_plan",
+  "rights_note": "사용자가 제공한 이미지의 원본은 공개 Git 저장소에 커밋하지 않는다. AI 생성물은 제공 사진을 구조·분위기 참고용으로만 사용하고, 객실 구조와 확인된 시설을 바꾸지 않는다.",
+  "photos": [
+    {"id":"P01","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-47223939-836d-4dc6-a5ee-96d32da9a261.png","subject":"넓은 다다미 객실, 테이블, 두 침대, 아치형 천장","role":"room_reference"},
+    {"id":"P02","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-c384e63d-d5e9-45f6-8e23-6ef173a74db4.png","subject":"어두운 동굴형 객실, TV와 아치형 벽","role":"cave_texture_reference"},
+    {"id":"P03","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-f0bd2363-98e5-425c-8955-00a0080650ac.png","subject":"두 침대가 정면으로 보이는 밝은 다다미 객실","role":"room_reference"},
+    {"id":"P04","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-042706fe-7329-4496-b8f1-bf82028b48ca.png","subject":"검은 동굴형 스파 공간과 중앙 욕조","role":"spa_reference"},
+    {"id":"P05","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-68d2d28d-6326-4676-9543-a1e8ecc82a6a.png","subject":"나무 창과 물이 흐르는 검은 스파 욕조","role":"spa_reference"},
+    {"id":"P06","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-803af992-2976-4d64-a83d-953a1389f600.png","subject":"샤워기 물줄기가 떨어지는 검은 스파 공간","role":"spa_action_reference"},
+    {"id":"P07","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-dacd26a4-e39b-4879-8597-1da078ae9f98.png","subject":"프로젝터와 리클라이너가 있는 어두운 라운지","role":"cinema_reference"},
+    {"id":"P08","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-ccc72ddd-9aea-4ac6-ab86-1ce032a6a037.png","subject":"프로젝터 화면과 라운지 침대","role":"cinema_reference"},
+    {"id":"P09","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-217d2442-c827-4d68-a679-e0174e56cb63.png","subject":"유카타가 걸린 밝은 객실과 다다미 테이블","role":"arrival_reference"},
+    {"id":"P10","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-6d2f95b2-f63e-46ed-bb6b-b581b00b3558.png","subject":"침대 옆 테이블과 아치형 객실 벽","role":"rest_reference"},
+    {"id":"P11","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-e10ca376-ebc9-40ff-8c0b-9339e4af45b7.png","subject":"검은 동굴형 침실과 조명","role":"sleep_reference"},
+    {"id":"P12","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-0e1cf6ab-1954-4f7a-9edc-bef4f23e3ddb.png","subject":"프로젝터와 침대가 함께 보이는 어두운 객실","role":"cinema_reference"},
+    {"id":"P13","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-3ed3ccdd-7233-430c-8ff4-6a2ed3d469be.png","subject":"차 도구와 향 제품이 놓인 트레이","role":"tea_detail_reference"},
+    {"id":"P14","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-93d8c895-80fd-41bd-9ff4-36314a0adb0e.png","subject":"다다미 테이블과 어두운 라운지로 이어지는 객실","role":"room_reference"},
+    {"id":"P15","source_path":"C:/Users/bugs1/AppData/Local/Temp/codex-clipboard-f4adc4e6-c575-4c09-a05a-21d0fe7db0a0.png","subject":"검은 아치형 세면 공간과 거울","role":"cave_texture_reference"}
+  ],
+  "ai_direction": "AI POV stills are primary for arrival, opening the room, sitting at the low table, turning on the projector, filling the spa, and resting. Each AI still must be a distinct action and must preserve the supplied room geometry, palette, fixtures, and furniture.",
+  "generated_stills_draft": [
+    {"id":"V01","status":"generated","type":"AI POV","reference_ids":["P04","P09"],"human_presence":"hand only for opening door"},
+    {"id":"V02","status":"generated","type":"AI eye-level environment","reference_ids":["P09","P15"],"human_presence":"none"},
+    {"id":"V03","status":"generated","type":"AI room-detail environment","reference_ids":["P13","P14"],"human_presence":"none"},
+    {"id":"V04","status":"generated","type":"AI eye-level environment","reference_ids":["P07","P08"],"human_presence":"none"},
+    {"id":"V05","status":"generated","type":"AI eye-level environment","reference_ids":["P04","P05"],"human_presence":"none"},
+    {"id":"V06","status":"generated","type":"AI POV action","reference_ids":["P04","P05"],"human_presence":"hand only for water control"}
+  ]
 }

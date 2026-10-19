@@ -2,9 +2,9 @@
   "schema_version": 2,
   "property": "케이브 료칸 by 아늑 성신여대점",
   "project_slug": "cave-ryokan-sungshin",
-  "current_stage": "research_ready",
-  "completed_stages": ["property_selected", "research_ready"],
-  "next_action": "사용자에게 실제 숙소 사진 8~15장을 받아 이야기와 컷을 확정한다.",
+  "current_stage": "narration_ready",
+  "completed_stages": ["property_selected", "research_ready", "narration_ready"],
+  "next_action": "AI POV 중심 대본을 사용자 승인받은 뒤, 9:16 AI still과 컷맵을 확정한다.",
   "research_access_date": "2026-10-19",
   "angle_candidates": [
     "서울 한복판에서 입구부터 동굴에 들어온 듯한 감각을 만드는 료칸 컨셉 숙소",
@@ -12,8 +12,8 @@
     "성신여대입구역 도보 1~2분인데 객실 안은 도심과 완전히 다른 분위기"
   ],
   "photo_request": {
-    "needed": true,
-    "count": "8-15",
+    "needed": false,
+    "count": "15",
     "preferred_beats": ["입구/복도", "대표 객실", "스파 욕조", "침대", "동굴 디테일", "다다미/차 세트", "야간 조명"]
   },
   "external_assets_tracked_in_git": false
