@@ -4,15 +4,15 @@
     "width": 1080,
     "height": 1920,
     "fps": 30,
-    "playback_speed": 1.0,
+    "playback_speed": 1.2,
     "crf": 18
   },
   "typecast": {
     "model": "ssfm-v30",
-    "voice_id": "tc_68ddea1e462b169ddd20b74d",
+    "voice_id": "tc_6a7446c19f2d7dfed990a900",
     "emotion": "normal",
     "emotion_intensity": 1.0,
-    "audio_tempo": 1.2,
+    "audio_tempo": 1.25,
     "target_lufs": -16.0,
     "remove_silence_ms": null
   },
@@ -42,7 +42,6 @@
     {"clip":"08.mp4","source_start":0.35},
     {"clip":"10.mp4","source_start":0.35},
     {"clip":"12.mp4","source_start":0.35},
-    {"clip":"09.mp4","source_start":0.35},
-    {"clip":"12.mp4","source_start":0.35}
+    {"clip":"09.mp4","source_start":0.35}
   ]
 }
