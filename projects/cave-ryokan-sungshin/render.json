@@ -9,7 +9,7 @@
   },
   "typecast": {
     "model": "ssfm-v30",
-    "voice_id": null,
+    "voice_id": "tc_68ddea1e462b169ddd20b74d",
     "emotion": "normal",
     "emotion_intensity": 1.0,
     "audio_tempo": 1.2,

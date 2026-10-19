@@ -26,6 +26,12 @@
     {"id":"V03","status":"generated","type":"AI room-detail environment","reference_ids":["P13","P14"],"human_presence":"none"},
     {"id":"V04","status":"generated","type":"AI eye-level environment","reference_ids":["P07","P08"],"human_presence":"none"},
     {"id":"V05","status":"generated","type":"AI eye-level environment","reference_ids":["P04","P05"],"human_presence":"none"},
-    {"id":"V06","status":"generated","type":"AI POV action","reference_ids":["P04","P05"],"human_presence":"hand only for water control"}
+    {"id":"V06","status":"generated","type":"AI POV action","reference_ids":["P04","P05"],"human_presence":"hand only for water control"},
+    {"id":"V07","status":"generated","type":"AI eye-level environment","reference_ids":["P01","P03"],"human_presence":"none"},
+    {"id":"V08","status":"generated","type":"AI detail environment","reference_ids":["P05","P06"],"human_presence":"none"},
+    {"id":"V09","status":"generated","type":"AI lying-down viewpoint","reference_ids":["P10","P11"],"human_presence":"none"},
+    {"id":"V10","status":"generated","type":"AI eye-level environment","reference_ids":["P07","P14"],"human_presence":"none"},
+    {"id":"V11","status":"generated","type":"AI detail environment","reference_ids":["P13","P14"],"human_presence":"none"},
+    {"id":"V12","status":"generated","type":"AI closing environment","reference_ids":["P07","P01"],"human_presence":"none"}
   ]
 }
