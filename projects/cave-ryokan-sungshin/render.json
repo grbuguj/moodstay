@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "playback_speed": 1.0,
+    "crf": 18
+  },
+  "typecast": {
+    "model": "ssfm-v30",
+    "voice_id": null,
+    "emotion": "normal",
+    "emotion_intensity": 1.0,
+    "audio_tempo": 1.2,
+    "target_lufs": -16.0,
+    "remove_silence_ms": null
+  },
+  "subtitle": {
+    "font_name": "Noto Serif KR",
+    "font_size": 72,
+    "outline": 2.7,
+    "shadow": 7.5,
+    "blur": 5.0
+  },
+  "ad": {
+    "label": "[광고]",
+    "font_name": "Noto Serif KR",
+    "font_size": 30,
+    "margin_right": 39,
+    "margin_top": 39
+  },
+  "cuts": []
+}
